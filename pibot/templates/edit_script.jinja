@@ -1,0 +1,215 @@
+{% extends "base.jinja" %}
+{% set user=get_current_user(required=False) %}
+
+{% if is_new_script %}
+{% set script_info={"username": user.username, "title": "New+"} %}
+{% endif %}
+
+{% set title_extension = script_info.username + "/" + script_info.title %}
+
+{% block nav_text %}
+  <div class="breadcrumb-container">
+    <a href="/{{ script_info.username }}" class="breadcrumb nav-text">{{ script_info.username }}</a>
+    <a href="/{{ script_info.username }}/scripts/" class="breadcrumb nav-text">script</a>
+
+    <a class="breadcrumb nav-text">
+      <span id="script-title">{{ script_info.title }}</span>
+      <input id="script-title-editor" type="text"/>
+    </a>
+
+  </div>
+{% endblock %}
+
+{% block head %}
+  <script type="text/javascript" src="/static/ace/ace.js"></script>
+  <style type="text/css">
+      html, body {
+        height: 100%;
+        margin: 0;
+      }
+
+      #script-editor {
+        display: block;
+        height: calc(100vh - 64px); /*TODO: Improve this so it doesn't contain set values*/
+      }
+
+      .nav-text::before {
+        content: '/';
+        margin: 0 5px 0 3px;
+        font-family: unset;
+      }
+
+      #script-title-editor {
+        display: inline-block;
+        width: auto;
+        font: inherit;
+        border-color: white;
+      }
+
+      .breadcrumb-container {
+        display: inline-block;
+      }
+
+    </style>
+
+    <script>
+      var editor;
+      $(document).ready(function() {
+        editor = ace.edit("script-editor");
+        editor.setTheme("ace/theme/twilight");
+        editor.session.setMode("ace/mode/python");
+
+        {% if mode == "view" %}
+        editor.setReadOnly(true);
+        {% endif %}
+      });
+    </script>
+
+    <script type="text/javascript">
+      $(document).ready(function(){
+        var script_title = $("#script-title")
+        var script_title_editor = $("#script-title-editor")
+        var script_title_loading = $("#script-title-loading")
+        var script_title_status = $("#script-title-status")
+
+        script_title_editor.hide()
+
+        var commit_changes = true;
+        var old_title;
+        var new_title;
+
+        var is_new_script = {% if is_new_script %}true{% else %}false{% endif %}
+
+        script_title.click(function () {
+            $(this).hide();
+            old_title = $(this).html();
+
+            script_title_editor.val(old_title)
+                               .show()
+                               .focus()
+                               .caretToEnd();
+        });
+
+        script_title_editor.focus(function() {
+          commit_changes = true;
+        })
+
+        script_title_editor.focusout(function () {
+            $(this).hide();
+            script_title.show();
+
+            new_title = $(this).val()
+
+            console.log(commit_changes)
+            if (commit_changes && new_title != old_title){
+              $.post(
+                  "/api/script/rename/",
+                  {
+                    old_title: old_title,
+                    new_title: new_title
+                  },
+                  function(data){
+                    if (data["ok"]){
+                      script_title.html(new_title)
+                      window.history.replaceState('', new_title, "/{{ script_info.username }}/script/" + new_title + "/");
+                    } else {
+                      console.log(data.error)
+                    }
+                  }
+              )
+            }
+            commit_changes = false;
+        });
+
+        script_title_editor.keydown(function(e) {
+          if (e.key == "Escape"){
+            commit_changes = false;
+            $(this).focusout();
+          }
+          else if (e.key == "Enter") {
+            commit_changes = true;
+            $(this).focusout();
+          }
+        })
+
+        $("#save-button").click(function(){
+          if (is_new_script){
+            $("#title-modal").openModal();
+          } else {
+            $.post("/api/script/upload/",
+              {
+                "title": "{{ script_info.title }}",
+                "script_body": editor.getValue()
+              },
+              function(data){
+                if(data["ok"]){
+                  Materialize.toast('Saved!', 2500, "rounded")
+                }
+              }
+            )
+          }
+        });
+
+        $("#share-button").click(function(){
+          alert("Not implemented...")
+        })
+
+        $("#download-button").click(function(){
+          alert("Not implemented...")
+        })
+      })
+    </script>
+
+    <script type="text/javascript" src="/static/jquery-caret.js"></script>
+{% endblock %}
+
+{% block data %}
+  <div id="script-editor">{{ script_body }}</div>{# This can't have spaces otherwise it gets dumped in the code block #}
+
+  <div class="fixed-action-btn" style="bottom: 45px; right: 24px;">
+    <a class="btn-floating btn-large red">
+      <i class="large material-icons">add</i>
+    </a>
+    <ul>
+      <li>
+        <a id="save-button" class="btn-floating yellow darken-1 tooltipped"
+          data-position="left" data-tooltip="Save">
+          <i class="material-icons">save</i>
+        </a>
+      </li>
+
+      <li>
+        <a id="share-button" class="btn-floating green tooltipped"
+          data-position="left" data-tooltip="Share">
+          <i class="material-icons">share</i>
+        </a>
+      </li>
+
+      <li>
+        <a id="download-button" class="btn-floating blue tooltipped"
+          data-position="left" data-tooltip="Download">
+          <i class="material-icons">file_download</i>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <div id="title-modal" class="modal bottom-sheet">
+    <form id="editor-form" action="/script/upload/" method="POST" enctype="multipart/form-data">
+      <div class="modal-content">
+        <h4>Creating a new Script</h4>
+
+        <!-- script title -->
+        <div class="input-field">
+          <input id="form-editor-title" name="title" type="text" class="validate" length="30">
+          <label for="form-editor-title">Title</label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="modal-action waves-effect waves-green btn-flat" type="submit" name="action">Create</button>
+        <a class="modal-action modal-close waves-effect waves-green btn-flat">Cancel</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

@@ -1,0 +1,62 @@
+<!DOCTYPE HTML>
+{% set user=get_current_user(required=False) %}
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  {% block title %}
+    {% if title_extension %}
+      <title>PiBot - {{ title_extension }}</title>
+    {% else %}
+      <title>PiBot</title>
+    {% endif %}
+  {% endblock title %}
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="/static/materialize/css/materialize.min.css">
+  <script type="text/javascript" src="/static/jquery-2.1.4.min.js"></script>
+  <script type="text/javascript" src="/static/materialize/js/materialize.min.js"></script>
+
+  {% block head %}
+  {% endblock %}
+</head>
+<body>
+  {% block body %}
+    {% block navbar %}
+      <ul id="dropdown-scripts" class="dropdown-content">
+        <li><a href="/scripts">Popular</a></li>
+        <li><a href="/{{ user.username }}/scripts">My Scripts</a></li>
+      </ul>
+
+      <ul id="dropdown-devices" class="dropdown-content">
+        <li><a href="/devices">Popular</a></li>
+        <li><a href="/{{ user.username }}/devices">My Devices</a></li>
+      </ul>
+
+      <nav class="light-blue lighten-1" role="navigation">
+        <div class="nav-wrapper container">
+          {% block nav_text %}
+            <a id="logo-container" href="#" class="brand-logo">Logo</a>
+          {% endblock %}
+          <ul class="right hide-on-med-and-down">
+            {% if user %}
+              <li><a class="dropdown-button" href="#!" data-activates="dropdown-devices">Devices<i class="material-icons right">arrow_drop_down</i></a></li>
+              <li><a class="dropdown-button" href="#!" data-activates="dropdown-scripts">Scripts<i class="material-icons right">arrow_drop_down</i></a></li>
+              <li><a href="/logout">Logout</a></li>
+            {% else %}
+              <li><a href="/login">Login</a></li>
+            {% endif %}
+          </ul>
+        </div>
+      </nav>
+    {% endblock %}
+
+    {% block container %}
+    <div class="container">
+      {% block data %}
+
+      {% endblock %}
+    </div>
+    {% endblock %}
+  {% endblock %}
+</body>
+</html>
